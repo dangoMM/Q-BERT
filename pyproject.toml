@@ -1,0 +1,18 @@
+[project]
+name = ""
+version = ""
+description = ""
+authors = [
+    {name = "", email = ""},
+]
+dependencies = [
+    "torch>=2.0.1",
+    "Jericho>=3.1.2",
+    "Redis>=5.0.0",
+    "tensorboardX>=2.6.2.2",
+    "transformers==2.8.0",
+]
+requires-python = ">=3.10"
+readme = "README.md"
+license = {text = "MIT"}
+
