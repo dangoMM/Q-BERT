@@ -6,3 +6,4 @@ z-machine-games-master
 qbert/extraction/data
 qbert/extraction/runs
 .pdm-python
+.vscode
