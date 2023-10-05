@@ -169,12 +169,12 @@ class QBERT(nn.Module):
             state_emb = torch.cat((o_t, src_t), dim=1) 
         else:
             g_t = self.state_gat.forward(graph_rep)
-            state_emb = torch.cat((g_t, o_t, src_t), dim=1)    
-        state_emb = F.relu(self.state_fc(state_emb))
-        det_state_emb = state_emb.clone()#.detach()
+            state_emb = torch.cat((g_t, o_t, src_t), dim=1)
+        inter_state_emb = F.relu(self.state_fc(state_emb))
+        det_state_emb = inter_state_emb.clone() #.detach()
         value = self.critic(det_state_emb)
 
-        decoder_t_output, decoder_t_hidden = self.decoder_template(state_emb, h_t)#torch.zeros_like(h_t))
+        decoder_t_output, decoder_t_hidden = self.decoder_template(inter_state_emb, h_t)  #torch.zeros_like(h_t))
 
         templ_enc_input = []
         decode_steps = []

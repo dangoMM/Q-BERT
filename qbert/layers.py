@@ -9,22 +9,22 @@ import random
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-class EncoderRNN(nn.Module):
-    def __init__(self, input_size, hidden_size):
-        super(EncoderRNN, self).__init__()
-        self.hidden_size = hidden_size
-        self.embedding = nn.Embedding(input_size, hidden_size)
-        self.gru = nn.GRU(hidden_size, hidden_size, batch_first=True)
+# class EncoderRNN(nn.Module):
+#     def __init__(self, input_size, hidden_size):
+#         super(EncoderRNN, self).__init__()
+#         self.hidden_size = hidden_size
+#         self.embedding = nn.Embedding(input_size, hidden_size)
+#         self.gru = nn.GRU(hidden_size, hidden_size, batch_first=True)
 
-    def forward(self, input):#, hidden):
-        embedded = self.embedding(input)#.unsqueeze(0)
-        hidden = self.initHidden(input.size(0))
-        output = embedded
-        output, hidden = self.gru(output, hidden)
-        return output, hidden
+#     def forward(self, input):#, hidden):
+#         embedded = self.embedding(input)#.unsqueeze(0)
+#         hidden = self.initHidden(input.size(0))
+#         output = embedded
+#         output, hidden = self.gru(output, hidden)
+#         return output, hidden
 
-    def initHidden(self, batch_size):
-        return torch.zeros(1, batch_size, self.hidden_size).cuda()
+#     def initHidden(self, batch_size):
+#         return torch.zeros(1, batch_size, self.hidden_size).cuda()
 
 
 class PackedEncoderRNN(nn.Module):
@@ -34,13 +34,13 @@ class PackedEncoderRNN(nn.Module):
         self.embedding = nn.Embedding(input_size, hidden_size)
         self.gru = nn.GRU(hidden_size, hidden_size)
 
-    def forward(self, input, hidden=None):
-        embedded = self.embedding(input).permute(1,0,2) # T x Batch x EmbDim
+    def forward(self, input_, hidden=None):
+        embedded = self.embedding(input_).permute(1,0,2) # T x Batch x EmbDim
         if hidden is None:
-            hidden = self.initHidden(input.size(0))
+            hidden = self.initHidden(input_.size(0))
 
         # Pack the padded batch of sequences
-        lengths = torch.tensor([torch.nonzero(n)[-1] + 1 for n in input], dtype=torch.long).cuda()#, device=device)
+        lengths = torch.tensor([torch.nonzero(n)[-1][0] + 1 for n in input_], dtype=torch.int64) #.cuda()  #, device=device)
 
         packed = nn.utils.rnn.pack_padded_sequence(embedded, lengths, enforce_sorted=False)
         output, hidden = self.gru(packed, hidden)
@@ -48,7 +48,7 @@ class PackedEncoderRNN(nn.Module):
         output, _ = nn.utils.rnn.pad_packed_sequence(output)
         # Return only the last timestep of output for each sequence
         idx = (lengths-1).view(-1,1).expand(len(lengths), output.size(2)).unsqueeze(0)
-        output = output.gather(0, idx).squeeze(0)
+        output = output.gather(0, idx.cuda()).squeeze(0)
         return output, hidden
 
     def initHidden(self, batch_size):
@@ -66,8 +66,8 @@ class DecoderRNN(nn.Module):
         self.softmax = nn.Softmax(dim=1)
 
     def forward(self, input, hidden):
-        input = input.unsqueeze_(0).expand(100, -1, -1)#.transpose(0, 1).contiguous()
-        output, hidden = self.gru(input, hidden)
+        input_ = input.unsqueeze(0).expand(100, -1, -1)#.transpose(0, 1).contiguous()
+        output, hidden = self.gru(input_, hidden)
         output = self.out(output[0])
         return output, hidden
 

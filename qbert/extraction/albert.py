@@ -16,7 +16,7 @@ RawResult = collections.namedtuple("RawResult",
 class AlbertQA(object):
 
     def __init__(self):
-        model_path = 'qbert/extraction/models'
+        model_path = "/home/yosuke/Q-BERT/qbert/extraction/models" #'qbert/extraction/models'
         torch.manual_seed(42)
         self.max_seq_length = 512
         self.doc_stride = 128
@@ -26,12 +26,13 @@ class AlbertQA(object):
         self.max_answer_length = 30
         self.model, self.tokenizer = self.load_model(model_path)
         if torch.cuda.is_available():
-            self.device = 'cuda'
+            self.device = 'cuda:1'
         else:
             self.device = 'cpu'
         self.model.to(self.device)
-        if self.device == 'cuda':
-            self.model = nn.DataParallel(self.model)
+        # print(summary(self.model, (3, 32, 32)))
+        # if self.device == 'cuda':
+        #     self.model = nn.DataParallel(self.model)
         self.model.eval()
 
     def load_model(self, model_path: str, do_lower_case=True):

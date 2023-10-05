@@ -7,3 +7,4 @@ qbert/extraction/data
 qbert/extraction/runs
 .pdm-python
 .vscode
+qbert/logs/*

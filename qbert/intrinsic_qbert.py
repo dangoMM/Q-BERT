@@ -56,7 +56,8 @@ class QBERTTrainer(object):
         self.chkpt_path = os.path.dirname(self.params['checkpoint_path'])
         if not os.path.exists(self.chkpt_path):
             os.mkdir(self.chkpt_path)
-        self.binding = load_bindings(params['rom_file_path'])
+        env = FrotzEnv(params['rom_file_path'])
+        self.binding = env.bindings
         self.max_word_length = self.binding['max_word_length']
         self.sp = spm.SentencePieceProcessor()
         self.sp.Load(params['spm_file'])
@@ -73,7 +74,6 @@ class QBERTTrainer(object):
                               params['buffer_size'],params['extraction'], params['training_type'],
                               params['clear_kg_on_reset'])
         self.template_generator = TemplateActionGenerator(self.binding)
-        env = FrotzEnv(params['rom_file_path'])
         self.max_game_score = env.get_max_score()
         self.cur_reload_state = env.get_state()
         self.vocab_act, self.vocab_act_rev = load_vocab(env)
@@ -495,7 +495,7 @@ class QBERTTrainer(object):
                     # INTRINSIC_MOTIVTATION= [set() for i in range(self.params['batch_size'])]
                     self.log_file("Current model saved at: model/checkpoints/{}.pt\n".format(cur_time))
                 self.model = QBERT(self.params, self.template_generator.templates, self.max_word_length,
-                                   self.vocab_act, self.vocab_act_rev, len(self.sp), gat=self.params['gat']).cuda()
+                                    self.vocab_act, self.vocab_act_rev, len(self.sp), gat=self.params['gat']).cuda()
 
 
                 if self.back_step >= self.params['buffer_size']:

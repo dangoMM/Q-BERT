@@ -4,8 +4,9 @@ import random
 import time
 
 def call_askbert(sentence, threshold=0.2, attribute=True):
-    url = "http://localhost:5000/"
+    url = "http://127.0.0.1:5000/"
 
+    # print(sentence)
     response = requests.request("POST", url, data={"state": sentence, "threshold": threshold, "attribute": attribute})
     response = json.JSONDecoder().decode(response.text)
 

@@ -23,6 +23,55 @@ def clean_obs(s):
         s = s.replace(c, ' ')
     return s.strip()
 
+class FrotzEnv(jericho.FrotzEnv):
+     
+     def find_valid_actions(self, candidate_actions):
+        """
+        Given a list of candidate actions, returns the subset that change
+        the state of the game. Because many different actions may
+        cause the same world change, this method returns the most
+        commonly used action for each world change.
+
+        :param candidate_actions: Candidate actions to test for validity.
+        :type candidate_actions: list
+        :returns: A list of the candidate actions found to be valid.
+
+        :Example:
+
+        >>> from jericho import *
+        >>> env = FrotzEnv('zork1.z5')
+        >>> env.find_valid_actions(['north', 'east', 'open mailbox', 'hail taxi'])
+        ['north', 'open mailbox']
+
+        """
+        if self.game_over() or self.victory() or self._emulator_halted():
+            return []
+        diff2acts = {}
+        orig_score = self.get_score()
+        state = self.get_state()
+        for act in candidate_actions:
+            self.set_state(state)
+            if isinstance(act, TemplateAction):
+                obs, rew, done, info = self.step(act.action)
+            else:
+                obs, rew, done, info = self.step(act)
+            if self._emulator_halted():
+                self.reset()
+                continue
+            if info['score'] != orig_score or done or self._world_changed():
+                # Heuristic to ignore actions with side-effect of taking items
+                if '(Taken)' in obs:
+                    continue
+                diff = self._get_world_diff()
+                if diff in diff2acts:
+                    if act not in diff2acts[diff]:
+                        diff2acts[diff].append(act)
+                else:
+                    diff2acts[diff] = [act]
+        valid_acts = [max(v, key=jericho.utl.verb_usage_count) for v in diff2acts.values()]
+        self.set_state(state)
+        return valid_acts
+
 
 class QBERTEnv:
     '''
@@ -55,8 +104,8 @@ class QBERTEnv:
 
     def create(self):
         ''' Create the Jericho environment and connect to redis. '''
-        self.env = jericho.FrotzEnv(self.rom_path, self.seed)
-        self.bindings = jericho.load_bindings(self.rom_path)
+        self.env = FrotzEnv(self.rom_path, self.seed)
+        self.bindings = self.env.bindings
         self.act_gen = TemplateActionGenerator(self.bindings)
         self.max_word_len = self.bindings['max_word_length']
         self.vocab, self.vocab_rev = load_vocab(self.env)
@@ -83,8 +132,8 @@ class QBERTEnv:
 
     def _build_graph_rep(self, action, ob_r):
         ''' Returns various graph-based representations of the current state. '''
-        objs = [o[0] for o in self.env.identify_interactive_objects(ob_r)]
-        objs.append('all')
+        i_obj_candidates = self.env._identify_interactive_objects(ob_r)
+        objs = self.env._score_object_names(interactive_objs=i_obj_candidates)
         admissible_actions = self._get_admissible_actions(objs)
         admissible_actions_rep = [self.state_rep.get_action_rep_drqa(a.action) \
                                   for a in admissible_actions] \
@@ -118,7 +167,7 @@ class QBERTEnv:
     def step(self, action):
         self.episode_steps += 1
         obs, reward, done, info = self.env.step(action)
-        info['valid'] = self.env.world_changed() or done
+        info['valid'] = self.env._world_changed() or done
         info['steps'] = self.episode_steps
         if info['valid']:
             self.valid_steps += 1

@@ -7,7 +7,7 @@ import os
 
 def start_flask():
     print('Starting flask')
-    subprocess.Popen(['cd extraction && gunicorn --workers 4 --bind 0.0.0.0:5000 wsgi:app'], shell=True)
+    subprocess.Popen(['cd extraction && gunicorn -c gunicorn_conf.py --workers 2 --bind 0.0.0.0:5000 wsgi:app'], shell=True)
     time.sleep(10)
 
 def start_redis(redis_db_path):
@@ -106,7 +106,7 @@ def worker(remote, parent_remote, env, buffer_size, training_type, clear_kg):
 class VecEnv:
 
     def __init__(self, num_envs, env, openie_path, redis_db_path, buffer_size, askbert, training_type, clear_kg):
-        start_flask()
+        # start_flask()
         start_redis(redis_db_path)
         self.conn_valid = redis.Redis(host='localhost', port=6379, db=0)
         self.closed = False
